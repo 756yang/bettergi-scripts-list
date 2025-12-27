@@ -1,15 +1,19 @@
+// ======================== 全局工具函数（只定义1次，所有函数共用）========================
+// 1. 路径标准化函数（统一处理，消除重复）
+function normalizePath(path) {
+    if (!path || typeof path !== 'string') return '';
+    let standardPath = path.replace(/\\/g, '/').replace(/\/+/g, '/');
+    return standardPath.endsWith('/') ? standardPath.slice(0, -1) : standardPath;
+}
 
-
-// ==============================================
-// 5. 角色识别与策略执行相关函数（保留原始功能）
-// ==============================================
-// 工具函数
+// 2. 提取路径最后一级名称
 function basename(filePath) {
     if (!filePath || typeof filePath !== 'string') return '';
-    const normalizedPath = filePath.replace(/\\/g, '/');
+    const normalizedPath = normalizePath(filePath);
     const lastSlashIndex = normalizedPath.lastIndexOf('/');
     return lastSlashIndex !== -1 ? normalizedPath.substring(lastSlashIndex + 1) : normalizedPath;
 }
+
 
 /*
 // 如果路径存在且返回的是数组，则认为是目录Folder
@@ -74,43 +78,8 @@ function readAllFilePaths(dir, depth = 0, maxDepth = 3, includeExtensions = ['.p
         return [];
     }
 }
-/*
-// 新记录在最下面
-async function writeFile(filePath, content, isAppend = false, maxRecords = 365) {
-    try {
-        if (isAppend) {
-            // 读取现有内容（如果文件不存在则为空）
-            const existingContent = file.readTextSync(filePath) || "";
-            // 分割成记录数组（过滤空字符串）
-            const records = existingContent.split("\n\n").filter(Boolean);
-            
-            // 关键修复：将新内容添加到末尾，然后只保留最后maxRecords条
-            const allRecords = [...records, content]; // 新内容放在最后
-            const latestRecords = allRecords.slice(-maxRecords); // 整体截取最新的maxRecords条
-            
-            // 拼接成最终内容
-            const finalContent = latestRecords.join("\n\n");
-            const result = file.WriteTextSync(filePath, finalContent, false);
-            
-            // 日志输出（可根据需要启用）
-            // log.info(result ? `[追加] 成功写入: ${filePath}` : `[追加] 写入失败: ${filePath}`);
-            return result;
-        } else {
-            // 非追加模式：直接覆盖写入
-            const result = file.WriteTextSync(filePath, content, false);
-            // log.info(result ? `[覆盖] 成功写入: ${filePath}` : `[覆盖] 写入失败: ${filePath}`);
-            return result;
-        }
-    } catch (error) {
-        // 发生错误时尝试创建文件并写入
-        const result = file.WriteTextSync(filePath, content, false);
-        log.info(result ? `[新建] 成功创建: ${filePath}` : `[新建] 创建失败: ${filePath}`);
-        return result;
-    }
-}
-*/
-// 新记录在最上面20250531
-async function writeFile(filePath, content, isAppend = false, maxRecords = 365) {
+// 新记录在最上面20250531 isAppend默认就是true追加
+function writeFile(filePath, content, isAppend = true, maxRecords = 36500) {
     try {
         if (isAppend) {
             // 读取现有内容，处理文件不存在的情况

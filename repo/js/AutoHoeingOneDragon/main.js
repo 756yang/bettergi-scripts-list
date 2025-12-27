@@ -1,10 +1,9 @@
-//当前js版本1.8.6
-
-//拾取时上下滑动的时间
+//当前js版本1.14.0
 
 let timeMoveUp;
 let timeMoveDown;
 let pickup_Mode = settings.pickup_Mode || "模板匹配拾取，拾取狗粮和怪物材料";
+let dumpers;
 if (settings.activeDumperMode) { //处理泥头车信息
     dumpers = settings.activeDumperMode.split('，').map(Number).filter(num => num === 1 || num === 2 || num === 3 || num === 4);
 } else {
@@ -12,11 +11,41 @@ if (settings.activeDumperMode) { //处理泥头车信息
 }
 let gameRegion;
 let targetItemPath = "assets/targetItems";
-let mainUITemplate = file.ReadImageMatSync("assets/MainUI.png");
-let itemFullTemplate = file.ReadImageMatSync("assets/itemFull.png");
-let targetItems;
 
-const rollingDelay = (+settings.rollingDelay || 25);
+let itemFullTemplate = file.ReadImageMatSync("assets/itemFull.png");
+let frozenTemplate = file.ReadImageMatSync("assets/解除冰冻.png");
+const frozenRo = RecognitionObject.TemplateMatch(frozenTemplate, 1379, 574, 1463 - 1379, 613 - 574);
+let cookingTemplate = file.ReadImageMatSync("assets/烹饪界面.png");
+const cookingRo = RecognitionObject.TemplateMatch(cookingTemplate, 1547, 965, 1815 - 1547, 1059 - 965);
+cookingRo.Threshold = 0.95;
+cookingRo.InitTemplate();
+let whiteFurinaTemplate = file.ReadImageMatSync("assets/白芙图标.png");
+let whiteFurinaRo = RecognitionObject.TemplateMatch(whiteFurinaTemplate, 1634, 967, 1750 - 1634, 1070 - 967);
+whiteFurinaRo.Threshold = 0.99;
+whiteFurinaRo.InitTemplate();
+
+let fIcontemplate = file.ReadImageMatSync('assets/F_Dialogue.png');
+let fIconRo = RecognitionObject.TemplateMatch(fIcontemplate, 1102, 335, 34, 400);
+fIconRo.Threshold = 0.95;
+fIconRo.InitTemplate();
+
+let mainUITemplate = file.ReadImageMatSync("assets/MainUI.png");
+const mainUIRo = RecognitionObject.TemplateMatch(mainUITemplate, 0, 0, 150, 150);
+
+
+let targetItems;
+let doFurinaSwitch = false;
+
+let findFInterval = (+settings.findFInterval || 100);
+if (findFInterval < 16) {
+    findFInterval = 16;
+}
+if (findFInterval > 200) {
+    findFInterval = 200;
+}
+let lastRoll = new Date();
+let checkDelay = Math.round(findFInterval / 2);
+let rollingDelay = (+settings.rollingDelay || 32);
 const pickupDelay = (+settings.pickupDelay || 100);
 const timeMove = (+settings.timeMove || 1000);
 
@@ -25,20 +54,45 @@ let blacklist = [];
 let blacklistSet = new Set();
 let state;
 const accountName = settings.accountName || "默认账户";
+let pathings;
+let localeWorks;
+
+const priorityTags = (settings.priorityTags || "").split("，").map(tag => tag.trim()).filter(tag => tag.length > 0);
+const excludeTags = (settings.excludeTags || "").split("，").map(tag => tag.trim()).filter(tag => tag.length > 0);
+
+let runningFailCount = 0;
 
 (async function () {
     targetItems = await loadTargetItems();
     //自定义配置处理
     const operationMode = settings.operationMode || "运行锄地路线";
 
-    let k = settings.efficiencyIndex;
-    // 空字符串、null、undefined 或非数字 → 0.5
-    if (k === '' || k == null || Number.isNaN(Number(k))) {
-        k = 0.5;
+    localeWorks = !isNaN(Date.parse(new Date().toLocaleString()));
+    if (!localeWorks) {
+        log.warn('[WARN] 当前设备本地时间格式无法解析');
+        log.warn('[WARN] 建议不要使用12小时时间制');
+        log.warn('[WARN] 已将记录改为使用utc时间');
+        await sleep(5000);
+    }
+
+    let k1 = +settings.eEfficiencyIndex || 2.5;
+    // 空字符串、null、undefined 或非数字 → 2.5
+    if (k1 === '' || k1 == null || Number.isNaN(Number(k1))) {
+        k1 = 2.5;
     } else {
-        k = Number(k);
-        if (k < 0) k = 0;
-        else if (k > 5) k = 5;
+        k1 = Number(k1);
+        if (k1 < 0) k1 = 0;
+        else if (k1 > 10) k1 = 10;
+    }
+
+    let k2 = +settings.mEfficiencyIndex || 0.5;
+    // 空字符串、null、undefined 或非数字 → 0.5
+    if (k2 === '' || k2 == null || Number.isNaN(Number(k2))) {
+        k2 = 0.5;
+    } else {
+        k2 = Number(k2);
+        if (k2 < 0) k2 = 0;
+        else if (k2 > 4) k2 = 4;
     }
 
     let targetEliteNum = (+settings.targetEliteNum || 400);
@@ -54,11 +108,9 @@ const accountName = settings.accountName || "默认账户";
     const groupTags = groupSettings.map(str => str.split('，').filter(Boolean));
     groupTags[0] = [...new Set(groupTags.flat())];
 
-    const priorityTags = (settings.priorityTags || "").split("，").map(tag => tag.trim()).filter(tag => tag.length > 0);
-    const excludeTags = (settings.excludeTags || "").split("，").map(tag => tag.trim()).filter(tag => tag.length > 0);
     if (pickup_Mode != "模板匹配拾取，拾取狗粮和怪物材料" && pickup_Mode != "模板匹配拾取，只拾取狗粮") {
         excludeTags.push("沙暴");
-        log.warn("拾取模式不是模板匹配或，无法处理沙暴路线，自动排除所有沙暴路线");
+        log.warn("拾取模式不是模板匹配，无法处理沙暴路线，自动排除所有沙暴路线");
     }
 
     await loadBlacklist(true);
@@ -81,19 +133,13 @@ const accountName = settings.accountName || "默认账户";
     }
 
     //预处理路线并建立对象
-    pathings = await processPathings();
-    //优先使用index中的数据
-    await updatePathings("assets/index1.json");
-    await updatePathings("assets/index2.json");
-
-    //加载路线cd信息
-    await initializeCdTime(pathings, accountName);
+    pathings = await processPathings(groupTags);
 
     //按照用户配置标记路线
     await markPathings(pathings, groupTags, priorityTags, excludeTags);
 
     //找出最优组合
-    await findBestRouteGroups(pathings, k, targetEliteNum, targetMonsterNum);
+    await findBestRouteGroups(pathings, k1, k2, targetEliteNum, targetMonsterNum);
 
     //分配到不同路径组
     await assignGroups(pathings, groupTags);
@@ -123,35 +169,61 @@ const accountName = settings.accountName || "默认账户";
         await updateRecords(pathings, accountName);
     } else if (operationMode === "运行锄地路线") {
         await switchPartyIfNeeded(partyName);
-        // 检测四神队伍并输出当前角色
-        const avatars = getAvatars() || [];
-        const need = ['钟离', '芙宁娜', '纳西妲', '雷电将军'];
 
-        let improperTeam = true;
-        for (let i = 0; i < need.length; i++) {
-            let found = false;
-            for (let j = 0; j < avatars.length; j++) {
-                if (avatars[j] === need[i]) {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                improperTeam = false;
-                break;
-            }
-        }
+        const avatars = Array.from(getAvatars?.() || []);
 
-        // 手动拼接角色名，避免 join 报错
+        // 拼接队伍字符串，放在 switch 之前
         let teamStr = '';
         for (let k = 0; k < avatars.length; k++) {
             teamStr += avatars[k];
-            if (k < avatars.length - 1) {
-                teamStr += '、';
-            }
+            if (k < avatars.length - 1) teamStr += '、';
         }
-
         log.info('当前队伍：' + teamStr);
+
+        switch (true) {
+            case targetEliteNum <= 350 && targetMonsterNum >= 100:
+                log.warn("目标怪物数量配置不合理，建议重新阅读 readme 相关部分");
+                await sleep(5000);
+                log.warn("目标怪物数量配置不合理，建议重新阅读 readme 相关部分");
+                await sleep(5000);
+                log.warn("目标怪物数量配置不合理，建议重新阅读 readme 相关部分");
+                await sleep(5000);
+                log.warn("目标怪物数量配置不合理，建议重新阅读 readme 相关部分");
+                await sleep(5000);
+                break;
+
+            case genshin.width !== 1920 || genshin.height !== 1080:
+                log.warn("游戏窗口非 1920×1080，可能导致图像识别失败，如果执意使用可能造成拾取等行为异常，后果自负");
+                await sleep(5000);
+                log.warn("游戏窗口非 1920×1080，可能导致图像识别失败，如果执意使用可能造成拾取等行为异常，后果自负");
+                await sleep(5000);
+                log.warn("游戏窗口非 1920×1080，可能导致图像识别失败，如果执意使用可能造成拾取等行为异常，后果自负");
+                await sleep(5000);
+                log.warn("游戏窗口非 1920×1080，可能导致图像识别失败，如果执意使用可能造成拾取等行为异常，后果自负");
+                await sleep(5000);
+                break;
+
+            case ['钟离', '芙宁娜', '纳西妲', '雷电将军'].every(n => avatars.includes(n)):
+                log.warn("四神队不适合锄地，建议重新阅读 readme 相关部分");
+                await sleep(10000);
+                return;
+
+            case avatars.includes('钟离'):
+                log.warn("当前队伍包含钟离，钟离不适合锄地，建议重新阅读 readme 相关部分");
+                await sleep(5000);
+                break;
+
+            case !['芙宁娜', '爱可菲', '玛薇卡'].some(n => avatars.includes(n)):
+                log.warn("未携带合适的输出角色（芙宁娜/爱可菲/玛薇卡），建议重新阅读 readme 相关部分");
+                await sleep(5000);
+                break;
+
+            case !['茜特菈莉', '伊涅芙', '莱依拉', '蓝砚', '白术', '琦良良', '迪希雅', '迪奥娜']
+                .some(n => avatars.includes(n)):
+                log.warn("未携带合适的抗打断角色（茜特菈莉/伊涅芙/莱依拉/蓝砚/白术/琦良良/迪希雅/迪奥娜）");
+                await sleep(5000);
+                break;
+        }
 
         log.info("开始运行锄地路线");
         await updateRecords(pathings, accountName);
@@ -164,13 +236,16 @@ const accountName = settings.accountName || "默认账户";
 })();
 
 //预处理路线，建立对象
-async function processPathings() {
+async function processPathings(groupTags) {
     // 读取怪物信息
     const monsterInfoContent = await file.readText("assets/monsterInfo.json");
     const monsterInfoObject = JSON.parse(monsterInfoContent);
 
     // 读取路径文件夹中的所有文件
     let pathings = await readFolder("pathing", true);
+
+    //加载路线cd信息
+    await initializeCdTime(pathings, accountName);
 
     // 定义解析 description 的函数
     function parseDescription(desc) {
@@ -191,7 +266,7 @@ async function processPathings() {
             const monsterList = monsterMatch[1].split('、');
             monsterList.forEach(monsterStr => {
                 const [countStr, monsterName] = monsterStr.split('只');
-                const count = parseInt(countStr.trim(), 10);
+                const count = Math.ceil(parseFloat(countStr.trim()) || 0);
                 routeInfo.monsterInfo[monsterName.trim()] = count;
             });
         }
@@ -199,6 +274,7 @@ async function processPathings() {
         return routeInfo;
     }
     let index = 0
+
     // 遍历每个路径文件并处理
     for (const pathing of pathings) {
         index++;
@@ -214,32 +290,7 @@ async function processPathings() {
         //pathing 对象的属性
         pathing.t = routeInfo.time; // description 中有值则覆盖
         pathing.monsterInfo = routeInfo.monsterInfo;
-        if (!settings.disableSelfOptimization && pathing.records) {
-            //如果用户没有禁用自动优化，则参考运行记录更改预期用时
-            const history = pathing.records.filter(v => v > 0);
-            if (history.length) {
-                const max = Math.max(...history);
-                const min = Math.min(...history);
 
-                let maxRemoved = false;
-                let minRemoved = false;
-
-                // 就地修改 history：先去掉一个最大值，再去掉一个最小值
-                for (let i = history.length - 1; i >= 0; i--) {
-                    const v = history[i];
-                    if (!maxRemoved && v === max) {
-                        history.splice(i, 1);
-                        maxRemoved = true;
-                    } else if (!minRemoved && v === min) {
-                        history.splice(i, 1);
-                        minRemoved = true;
-                    }
-                    if (maxRemoved && minRemoved) break;
-                }
-            }
-            //每一个有效的record占用0.2权重，剩余权重为原时间
-            pathing.t = pathing.t * (1 - history.length * 0.2) + history.reduce((a, b) => a + b, 0);
-        }
         pathing.m = 0; // 普通怪物数量
         pathing.e = 0; // 精英怪物数量
         pathing.mora_m = 0; // 普通怪物摩拉值
@@ -265,10 +316,51 @@ async function processPathings() {
             }
         }
 
+        const allTags = groupTags[0];          // 已经是 [...new Set(...)] 的结果
+        // 2. 待匹配文本：路径名 + 描述
+        const textToMatch = (pathing.fullPath + " " + (description || ""));
+        // 3. 反查补 tag
+        allTags.forEach(tag => {
+            if (textToMatch.includes(tag)) {
+                pathing.tags.push(tag);
+            }
+        });
+
         // 去除重复标签
         pathing.tags = [...new Set(pathing.tags)];
         // 处理 map_name 属性
         pathing.map_name = parsedContent.info?.map_name || "Teyvat"; // 如果有 map_name，则使用其值，否则默认为 "Teyvat"
+    }
+
+    for (const pathing of pathings) {
+        if (!settings.disableSelfOptimization && pathing.records) {
+            //如果用户没有禁用自动优化，则参考运行记录更改预期用时
+            const history = pathing.records.filter(v => v > 0);
+            if (history.length) {
+                const max = Math.max(...history);
+                const min = Math.min(...history);
+
+                let maxRemoved = false;
+                let minRemoved = false;
+
+                // 就地修改 history：先去掉一个最大值，再去掉一个最小值
+                for (let i = history.length - 1; i >= 0; i--) {
+                    const v = history[i];
+                    if (!maxRemoved && v === max) {
+                        history.splice(i, 1);
+                        maxRemoved = true;
+                    } else if (!minRemoved && v === min) {
+                        history.splice(i, 1);
+                        minRemoved = true;
+                    }
+                    if (maxRemoved && minRemoved) break;
+                }
+            }
+            prevt = pathing.t;
+            //每一个有效的record占用0.2权重，剩余权重为原时间
+            pathing.t = pathing.t * (1 - history.length * 0.2) + history.reduce((a, b) => a + b, 0) * 0.2;
+            //log.info(`将路线${pathing.fileName}用时从${prevt}更新为${pathing.t}`)
+        }
     }
     return pathings; // 返回处理后的 pathings 数组
 }
@@ -305,7 +397,7 @@ async function markPathings(pathings, groupTags, priorityTags, excludeTags) {
     });
 }
 
-async function findBestRouteGroups(pathings, k, targetEliteNum, targetMonsterNum) {
+async function findBestRouteGroups(pathings, k1, k2, targetEliteNum, targetMonsterNum) {
     /* ========== 0. 原初始化不动 ========== */
     let nextTargetEliteNum = targetEliteNum;
     let iterationCount = 0;
@@ -324,11 +416,31 @@ async function findBestRouteGroups(pathings, k, targetEliteNum, targetMonsterNum
         p.selected = false;
         const G1 = p.mora_e + p.mora_m, G2 = p.mora_m;
         p.G1 = G1; p.G2 = G2;
-        p.E1 = p.e === 0 ? 0 : ((G1 - G2 * f) / p.e) ** k * (G1 / p.t);
-        p.E2 = p.m === 0 ? 0 : (G2 / p.m) ** k * (G2 / p.t);
+
+        /* 分离系数 0-1：0 无惩罚，1 最大惩罚 95 % */
+        const splitFactor = +(settings.splitFactor ?? 0);
+
+        /* 混合度：纯血 λ=0，最混合 λ=1 */
+        const λ = (p.e === 0 || p.m === 0) ? 0
+            : 1 - Math.min(p.e, p.m) / Math.max(p.e, p.m);
+
+        /* 仅 E2 惩罚，上限 95 %，线性 */
+        const penalty = 1 - 0.95 * splitFactor * λ;
+
+        /* 收益 */
+        const eliteGain = p.e === 0 ? 200 : (G1 - G2) / p.e;
+        const normalGain = p.m === 0 ? 40.5 : G2 / p.m;
+
+        /* 打分：E1 不惩罚，E2 带惩罚 */
+        p.E1 = (eliteGain ** k1) * (G1 / p.t);
+        if (p.e === 0) p.E1 = 0;
+
+        p.E2 = (normalGain ** k2) * (G2 / p.t) * penalty;
+
         maxE1 = Math.max(maxE1, p.E1);
         maxE2 = Math.max(maxE2, p.E2);
     });
+
     pathings.forEach(p => {
         if (p.prioritized) { p.E1 += maxE1; p.E2 += maxE2; }
     });
@@ -384,26 +496,21 @@ async function findBestRouteGroups(pathings, k, targetEliteNum, targetMonsterNum
     }
 
     /* ========== 3. 最小不可再减集合（贪心逆筛） ========== */
-    // 3.1 【仅修改此处】排序依据改为约定的score：(怪均收益^k) × 秒均收益（精英权重=5）
-    // 怪均收益 = (总收益) / (精英数×5 + 普通怪数)；秒均收益 = 总收益 / 时间；score小的优先删除
     const selectedList = pathings.filter(p => p.selected)
         .sort((a, b) => {
-            // 计算a的score
-            const aTotalGain = a.G1 + a.G2;
-            const aDenominator = a.e * 5 + a.m; // 精英权重=5
-            const aPerMobGain = aDenominator === 0 ? 0 : aTotalGain / aDenominator;
-            const aPerSecGain = a.t === 0 ? 0 : aTotalGain / a.t;
-            const aScore = (aPerMobGain ** k) * aPerSecGain;
+            /* ********  关键修改  ******** */
+            const eliteGainA = a.e === 0 ? 200 : (a.G1 - a.G2) / a.e;
+            const normalGainA = a.m === 0 ? 40.5 : a.G2 / a.m;
+            const perSecA = a.t === 0 ? 0 : a.G1 / a.t;
+            const aScore = (((eliteGainA / 200) ** k1) + ((normalGainA / 40.5) ** k2)) * perSecA;
 
-            // 计算b的score
-            const bTotalGain = b.G1 + b.G2;
-            const bDenominator = b.e * 5 + b.m; // 精英权重=5
-            const bPerMobGain = bDenominator === 0 ? 0 : bTotalGain / bDenominator;
-            const bPerSecGain = b.t === 0 ? 0 : bTotalGain / b.t;
-            const bScore = (bPerMobGain ** k) * bPerSecGain;
+            const eliteGainB = b.e === 0 ? 200 : (b.G1 - b.G2) / b.e;
+            const normalGainB = b.m === 0 ? 40.5 : b.G2 / b.m;
+            const perSecB = b.t === 0 ? 0 : b.G1 / b.t;
+            const bScore = (((eliteGainB / 200) ** k1) + ((normalGainB / 40.5) ** k2)) * perSecB;
+            /* ******************************** */
 
-            // 升序排序：score小的在前，优先删除
-            return aScore - bScore;
+            return aScore - bScore;   // 升序：小的先删
         });
 
     for (const p of selectedList) {
@@ -415,7 +522,7 @@ async function findBestRouteGroups(pathings, k, targetEliteNum, targetMonsterNum
             p.selected = false;
             totalSelectedElites = newE;
             totalSelectedMonsters = newM;
-            totalGainCombined -= (p.selected ? p.G1 : p.G2);
+            totalGainCombined -= p.G1;   // 精英阶段已用 G1 统计
             totalTimeCombined -= p.t;
         }
     }
@@ -470,7 +577,38 @@ async function assignGroups(pathings, groupTags) {
 }
 
 async function runPath(fullPath, map_name) {
-    state = { running: true };
+    //当需要切换芙宁娜形态时，执行一次强制黑芙
+    if (doFurinaSwitch) {
+        log.info("上条路线识别到白芙，开始强制切换黑芙")
+        doFurinaSwitch = false;
+        await pathingScript.runFile("assets/强制黑芙.json");
+    }
+    /* ===== 1. 取得当前路线对象 ===== */
+    let currentPathing = null;
+    for (let i = 0; i < pathings.length; i++) {
+        if (pathings[i].fullPath === fullPath) {
+            currentPathing = pathings[i];
+            break;
+        }
+    }
+
+    /* ===== 2. 重排 targetItems：当前路线拾取过的提前 ===== */
+    if (targetItems && currentPathing && currentPathing.items && currentPathing.items.length) {
+        // 用对象当 Set 做 O(1) 查询
+        const history = {};
+        for (let i = 0; i < currentPathing.items.length; i++) {
+            history[currentPathing.items[i]] = true;
+        }
+        // 排序：命中历史 -> 提前，其余保持原序
+        targetItems.sort(function (a, b) {
+            const aHit = history[a.itemName] ? 1 : 0;
+            const bHit = history[b.itemName] ? 1 : 0;
+            return bHit - aHit;   // 1 在前，0 在后
+        });
+    }
+
+    /* ===== 3. 原逻辑不变 ===== */
+    state = { running: true, currentPathing: currentPathing };
 
     /* ---------- 主任务 ---------- */
     const pathingTask = (async () => {
@@ -483,14 +621,64 @@ async function runPath(fullPath, map_name) {
 
     /* ---------- 伴随任务 ---------- */
     const pickupTask = (async () => {
-        if (pickup_Mode === "模板匹配拾取，拾取狗粮和怪物材料" || pickup_Mode === "模板匹配拾取，只拾取狗粮") {
+        if (pickup_Mode != "不拾取任何物品") {
             await recognizeAndInteract();
         }
     })();
 
     const errorProcessTask = (async () => {
+        let errorProcessCount = 0;
+        async function checkRo(recognitionObject) {
+            const maxAttempts = 1;
+            let attempts = 0;
+            let errorProcessGameRegion;
+            while (attempts < maxAttempts && state.running) {
+                try {
+                    errorProcessGameRegion = captureGameRegion();
+                    const result = errorProcessGameRegion.find(recognitionObject);
+                    errorProcessGameRegion.dispose();
+                    if (result.isExist()) {
+                        return true;
+                    }
+                } catch (error) {
+                    log.error(`识别图像时发生异常: ${error.message}`);
+                    if (!state.running) break;
+                    return false;
+                }
+                attempts++;
+            }
+            return false;
+        }
         while (state.running) {
-            await sleep(1000);
+            if (errorProcessCount % 5 === 0) {
+                //每约250毫秒进行一次冻结检测和白芙检测
+                if (await checkRo(frozenRo)) {
+                    log.info("检测到冻结，尝试挣脱");
+                    for (let m = 0; m < 3; m++) {
+                        keyPress("VK_SPACE");
+                        await sleep(30);
+                    }
+                    continue;
+                }
+                if (!doFurinaSwitch) {
+                    if (await checkRo(whiteFurinaRo)) {
+                        log.info("检测到白芙，本路线运行结束后切换芙宁娜形态");
+                        doFurinaSwitch = true;
+                        continue;
+                    }
+                }
+            }
+            if (errorProcessCount % 100 === 0) {
+                //每约5000毫秒进行一次烹饪检测
+                if (await checkRo(cookingRo)) {
+                    log.info("检测到烹饪界面，尝试脱离");
+                    keyPress("VK_ESCAPE");
+                    await sleep(500);
+                    continue;
+                }
+            }
+            errorProcessCount++;
+            await sleep(45);
         }
     })();
 
@@ -516,11 +704,32 @@ async function runPath(fullPath, map_name) {
             }
             return false;
         }
+
+        /**
+         * 计算匹配度：itemName中文部分在识别文本中出现的最长长度占总长度的比例
+         * @param {string} cnPart itemName的中文部分
+         * @param {string} ocrText OCR识别到的文本
+         * @returns {number} 0~1
+         */
+        function calcMatchRatio(cnPart, ocrText) {
+            if (!cnPart || !ocrText) return 0;
+            const len = cnPart.length;
+            let maxMatch = 0;
+            // 滑动窗口找最长连续子串
+            for (let i = 0; i <= ocrText.length - len; i++) {
+                let match = 0;
+                for (let j = 0; j < len; j++) {
+                    if (ocrText[i + j] === cnPart[j]) match++;
+                }
+                maxMatch = Math.max(maxMatch, match);
+            }
+            return maxMatch / len;
+        }
+
         if (pickup_Mode === "模板匹配拾取，拾取狗粮和怪物材料" || pickup_Mode === "模板匹配拾取，只拾取狗粮") {
             while (state.running) {
                 await sleep(1500);
                 if (await checkItemFull()) {
-                    /* 1. OCR 560×450 → 1360×620 区域 */
                     const TEXT_X = 560, TEXT_Y = 450, TEXT_W = 1360 - 560, TEXT_H = 620 - 450;
                     let ocrText = null;
                     try {
@@ -538,18 +747,35 @@ async function runPath(fullPath, map_name) {
                         log.error(`OCR异常: ${e.message}`);
                     }
 
-                    /* 2. 遍历 targetItems 找匹配 */
                     if (ocrText) {
                         log.info(`识别到背包已满，识别到文本：${ocrText}`);
+                        const ratioMap = new Map(); // itemName -> ratio
+
                         for (const targetItem of targetItems) {
                             const cnPart = targetItem.itemName.replace(/[^\u4e00-\u9fa5]/g, '');
-                            if (cnPart && ocrText.includes(cnPart)) {   // 子串即可
-                                const itemName = targetItem.itemName;   // 用原始完整名字
-                                log.warn(`物品"${itemName}"已满，加入黑名单`);
-                                blacklistSet.add(itemName);
-                                blacklist.push(itemName);
-                                await loadBlacklist(false);
+                            const ratio = calcMatchRatio(cnPart, ocrText);
+                            if (ratio > 0.75) {
+                                ratioMap.set(targetItem.itemName, ratio);
                             }
+                        }
+
+                        if (ratioMap.size > 0) {
+                            // 找出最大匹配度
+                            const maxRatio = Math.max(...ratioMap.values());
+                            // 所有等于最大匹配度的项
+                            const names = Array.from(ratioMap.entries())
+                                .filter(([, r]) => r === maxRatio)
+                                .map(([n]) => n)
+                                .sort(); // 排序方便日志
+
+                            log.warn(`以下物品匹配度最高且≥75%（${(maxRatio * 100).toFixed(1)}%），加入黑名单：${names.join('、')}`);
+                            for (const nm of names) {
+                                if (!blacklistSet.has(nm)) {
+                                    blacklistSet.add(nm);
+                                    blacklist.push(nm);
+                                }
+                            }
+                            await loadBlacklist(false);
                         }
                     }
                 }
@@ -557,11 +783,10 @@ async function runPath(fullPath, map_name) {
         }
     })();
 
-
     /* ---------- 泥头车任务 ---------- */
     let dumperTask = null;
-    if (dumpers.length > 0) {                       // 检查 dumpers 是否不为空
-        dumperTask = dumper(fullPath, map_name);    // 调用 dumper 函数
+    if (dumpers.length > 0) {
+        dumperTask = dumper(fullPath, map_name);
     }
 
     /* ---------- 并发等待 ---------- */
@@ -570,8 +795,8 @@ async function runPath(fullPath, map_name) {
         pickupTask,
         errorProcessTask,
         blacklistTask,
-        dumperTask      // 即使为 null，allSettled 也会忽略
-    ].filter(Boolean)); // 过滤掉 null，防止某些运行时报警
+        dumperTask
+    ].filter(Boolean));
 }
 
 // 定义一个函数用于拾取
@@ -579,10 +804,10 @@ async function recognizeAndInteract() {
     //log.info("调试-开始执行图像识别与拾取任务");
     let lastcenterYF = 0;
     let lastItemName = "";
-    let fIcontemplate = file.ReadImageMatSync('assets/F_Dialogue.png');
     let thisMoveUpTime = 0;
     let lastMoveDown = 0;
     gameRegion = captureGameRegion();
+    let itemName;
     //主循环
     while (state.running) {
         gameRegion.dispose();
@@ -590,7 +815,12 @@ async function recognizeAndInteract() {
         let centerYF = await findFIcon();
 
         if (!centerYF) {
-            if (await isMainUI()) await keyMouseScript.runFile(`assets/滚轮下翻.json`);
+            if (await isMainUI()) {
+                if (new Date() - lastRoll >= 200) {
+                    await keyMouseScript.runFile(`assets/滚轮下翻.json`);
+                    lastRoll = new Date();
+                }
+            }
             continue;
         }
         /*
@@ -600,7 +830,12 @@ async function recognizeAndInteract() {
         //log.info(`调试-成功找到f图标,centerYF为${centerYF}`);
 
         let foundTarget = false;
-        let itemName = await performTemplateMatch(centerYF);
+        if (pickup_Mode === "模板匹配拾取，拾取狗粮和怪物材料" || pickup_Mode === "模板匹配拾取，只拾取狗粮") {
+            let time1 = new Date();
+            itemName = await performTemplateMatch(centerYF);
+            let time2 = new Date();
+            //log.info(`调试-本次识别用时${time2 - time1}毫秒`);
+        }
         if (itemName) {
             //log.info(`调试-识别到物品${itemName}`);
             if (Math.abs(lastcenterYF - centerYF) <= 20 && lastItemName === itemName) {
@@ -614,6 +849,12 @@ async function recognizeAndInteract() {
                 } else {
                     keyPress("F");
                     log.info(`交互或拾取："${itemName}"`);
+                    // 把本次拾取加入当前路线名单，保持最多 20 个
+                    if (state.currentPathing) {
+                        state.currentPathing.items.push(itemName);
+                        // 去重 + 保留最后 20 个
+                        state.currentPathing.items = [...new Set(state.currentPathing.items)].slice(-20);
+                    }
                     lastcenterYF = centerYF;
                     lastItemName = itemName;
                     await sleep(pickupDelay);
@@ -643,39 +884,35 @@ async function recognizeAndInteract() {
     }
 
     async function performTemplateMatch(centerYF) {
+        /* 一次性切 6 种宽度（0-5 汉字） */
+        const regions = [];
+        for (let cn = 0; cn <= 5; cn++) {   // 0~5 共 6 档
+            const w = 12 + 28 * Math.min(cn, 5) + 2;
+            regions[cn] = gameRegion.DeriveCrop(1219, centerYF - 15, w, 30);
+        }
+
         try {
-            let result;
-            let itemName = null;
-            for (const targetItem of targetItems) {
-                const cnLen = Math.min([...targetItem.itemName].filter(c => c >= '\u4e00' && c <= '\u9fff').length, 5);
-                const recognitionObject = RecognitionObject.TemplateMatch(
-                    targetItem.template,
-                    1219,
-                    centerYF - 15,
-                    12 + 28 * cnLen + 2,
-                    30
-                );
-                recognitionObject.Threshold = 0.9;
-                recognitionObject.InitTemplate();
-                result = gameRegion.find(recognitionObject);
-                if (result.isExist()) {
-                    itemName = targetItem.itemName;
-                    break;
+            for (const it of targetItems) {
+                const cnLen = Math.min(
+                    [...it.itemName].filter(c => c >= '\u4e00' && c <= '\u9fff').length,
+                    5
+                ); // 0-5
+
+                if (regions[cnLen].find(it.roi).isExist()) {
+                    return it.itemName;
                 }
             }
-            return itemName;
-        } catch (error) {
-            log.error(`模板匹配时发生异常: ${error.message}`);
-            return null;
+        } catch (e) {
+            log.error(`performTemplateMatch: ${e.message}`);
+        } finally {
+            regions.forEach(r => r.dispose());
         }
+        return null;
     }
 
     async function findFIcon() {
-        let recognitionObject = RecognitionObject.TemplateMatch(fIcontemplate, 1102, 335, 34, 400);
-        recognitionObject.Threshold = 0.95;
-        recognitionObject.InitTemplate();
         try {
-            let result = gameRegion.find(recognitionObject);
+            let result = gameRegion.find(fIconRo);
             if (result.isExist()) {
                 return Math.round(result.y + result.height / 2);
             }
@@ -684,7 +921,7 @@ async function recognizeAndInteract() {
             if (!state.running)
                 return null;
         }
-        await sleep(50);
+        await sleep(checkDelay);
         return null;
     }
 
@@ -712,7 +949,6 @@ async function loadBlacklist(merge = false) {
 }
 
 async function isMainUI() {
-    const recognitionObject = RecognitionObject.TemplateMatch(mainUITemplate, 0, 0, 150, 150);
     const maxAttempts = 1;
     let attempts = 0;
     let dodispose = false;
@@ -722,7 +958,7 @@ async function isMainUI() {
             dodispose = true;
         }
         try {
-            const result = gameRegion.find(recognitionObject);
+            const result = gameRegion.find(mainUIRo);
             if (result.isExist()) return true;
         } catch (error) {
             log.error(`识别图像时发生异常: ${error.message}`);
@@ -730,25 +966,26 @@ async function isMainUI() {
             return false;
         }
         attempts++;
-        await sleep(50);
+        await sleep(checkDelay);
         if (dodispose) {
-            gameRegion.dispose;
+            gameRegion.dispose();
         }
     }
     return false;
 }
 
-//加载拾取物图片
+// 加载拾取物图片
 async function loadTargetItems() {
+
     let targetItemPath;
     if (pickup_Mode === "模板匹配拾取，拾取狗粮和怪物材料") {
         targetItemPath = "assets/targetItems/";
     } else if (pickup_Mode === "模板匹配拾取，只拾取狗粮") {
-        targetItemPath = "assets/targetItems/其他/";
+        targetItemPath = "assets/targetItems/00狗粮（0.8）/";
     } else {
         return null;
     }
-
+    log.info("开始加载模板图片");
     const items = await readFolder(targetItemPath, false);
 
     // 统一预加载模板
@@ -756,9 +993,23 @@ async function loadTargetItems() {
         try {
             it.template = file.ReadImageMatSync(it.fullPath);
             it.itemName = it.fileName.replace(/\.png$/i, '');
+            it.roi = RecognitionObject.TemplateMatch(it.template);
+
+            // 新增：解析括号中的阈值
+            const match = it.fullPath.match(/[（(](.*?)[)）]/); // 匹配英文或中文括号
+            let itsThreshold;
+            if (match) {
+                const val = parseFloat(match[1]);
+                itsThreshold = (!isNaN(val) && val >= 0 && val <= 1) ? val : 0.9;
+            } else {
+                itsThreshold = 0.9;
+            }
+            it.roi.Threshold = itsThreshold;
+            it.roi.InitTemplate();
+
         } catch (error) { }
     }
-
+    log.info("模板图片加载完成");
     return items;
 }
 
@@ -973,7 +1224,7 @@ async function dumper(pathFilePath, map_name) {
             attempts++; // 增加尝试次数
             await sleep(200); // 每次检测间隔 200 毫秒
             if (dodispose) {
-                gameRegion.dispose;
+                gameRegion.dispose();
             }
         }
         return false; // 如果尝试次数达到上限或取消，返回 false
@@ -1057,7 +1308,6 @@ async function copyPathingsByGroup(pathings) {
 async function processPathingsByGroup(pathings, accountName) {
     let lastX = 0;
     let lastY = 0;
-    let runningFailCount = 0;
 
     // 定义路径组名称到组号的映射（10 个）
     const groupMapping = {
@@ -1087,6 +1337,7 @@ async function processPathingsByGroup(pathings, accountName) {
 
     if (pickup_Mode === "bgi原版拾取") {
         dispatcher.addTimer(new RealtimeTimer("AutoPick"));
+        rollingDelay = 160;
     }
 
     // 初始化统计变量
@@ -1175,27 +1426,47 @@ async function processPathingsByGroup(pathings, accountName) {
             }
             await fakeLog(`${pathing.fileName}`, false, false, 0);
 
+            let fileEndX = 0, fileEndY = 0;
+            try {
+                const raw = file.readTextSync(pathing.fullPath);
+                const json = JSON.parse(raw);
+                if (Array.isArray(json.positions)) {
+                    for (let i = json.positions.length - 1; i >= 0; i--) {
+                        const p = json.positions[i];
+                        if (p.type !== 'orientation' &&
+                            typeof p.x === 'number' &&
+                            typeof p.y === 'number') {
+                            fileEndX = p.x;
+                            fileEndY = p.y;
+                            break;
+                        }
+                    }
+                }
+            } catch (e) { /* 读文件失败就留 0,0 继续走后面逻辑 */ }
+
             try {
                 await genshin.returnMainUi();
                 const miniMapPosition = await genshin.getPositionFromMap(pathing.map_name);
-                // 比较坐标
                 const diffX = Math.abs(lastX - miniMapPosition.X);
                 const diffY = Math.abs(lastY - miniMapPosition.Y);
+                const endDiffX = Math.abs(fileEndX - miniMapPosition.X);
+                const endDiffY = Math.abs(fileEndY - miniMapPosition.Y);
+
                 lastX = miniMapPosition.X;
                 lastY = miniMapPosition.Y;
-                if ((diffX + diffY) < 5) {
+
+                if ((diffX + diffY) < 5 || (endDiffX + endDiffY) > 30) {
                     runningFailCount++;
                 } else {
                     runningFailCount = 0;
                 }
-                //log.info(`当前位于${pathing.map_name}地图的（${miniMapPosition.X}，${miniMapPosition.Y}，距离上次距离${(diffX + diffY)}`);
             } catch (error) {
                 log.error(`获取坐标时发生错误：${error.message}`);
                 runningFailCount++;
             }
 
             if (runningFailCount >= 1) {
-                log.error("出发点与终点过于接近，或坐标获取异常，不记录运行数据");
+                log.error("出发点与终点过于接近，终点偏差大于30，或坐标获取异常，不记录运行数据");
                 continue;
             }
 
@@ -1212,6 +1483,7 @@ async function processPathingsByGroup(pathings, accountName) {
 
             // 更新路径的 cdTime
             pathing.cdTime = nextEightClock.toLocaleString();
+            if (!localeWorks) pathing.cdTime = nextEightClock.toISOString();
 
             remainingEstimatedTime -= pathing.t;
             const actualUsedTime = (new Date() - groupStartTime) / 1000;
@@ -1234,13 +1506,21 @@ async function initializeCdTime(pathings, accountName) {
         const cdTimeData = JSON.parse(fileContent);
 
         pathings.forEach(pathing => {
-            const entry = cdTimeData.find(e => e.fileName === pathing.fileName);
-
+            let entry = null;
+            for (let i = 0; i < cdTimeData.length; i++) {
+                if (cdTimeData[i].fileName === pathing.fileName) {
+                    entry = cdTimeData[i];
+                    break;
+                }
+            }
             // 读取 cdTime
             pathing.cdTime = entry
                 ? new Date(entry.cdTime).toLocaleString()
                 : new Date(0).toLocaleString();
 
+            if (!localeWorks) pathing.cdTime = entry
+                ? new Date(entry.cdTime).toISOString()
+                : new Date(0).toISOString();
             // 确保当前 records 是数组
             const current = Array.isArray(pathing.records) ? pathing.records : new Array(7).fill(-1);
 
@@ -1250,11 +1530,18 @@ async function initializeCdTime(pathings, accountName) {
             // 合并：文件中的 records（倒序最新在前）→ 追加到当前数组末尾
             // 再整体倒序恢复正确顺序，截取最新 7 项
             pathing.records = [...current, ...loaded.reverse()].slice(-7);
+            // 读取历史拾取名单，只保留最后 20 个不重复
+            const rawItems = (entry && Array.isArray(entry.items)) ? entry.items : [];
+            pathing.items = [...new Set(rawItems)].slice(-20);   // 去重 + 截断
         });
     } catch (error) {
         // 文件不存在或解析错误，初始化为 6 个 -1
         pathings.forEach(pathing => {
             pathing.cdTime = new Date(0).toLocaleString();
+            pathing.records = new Array(7).fill(-1);
+        });
+        if (!localeWorks) pathings.forEach(pathing => {
+            pathing.cdTime = new Date(0).toISOString();
             pathing.records = new Array(7).fill(-1);
         });
     }
@@ -1267,15 +1554,14 @@ async function updateRecords(pathings, accountName) {
         const cdTimeData = pathings.map(pathing => ({
             fileName: pathing.fileName,
             标签: pathing.tags,
-            预计用时: pathing.t,
+            预计用时: pathing.t.toFixed(2),
             cdTime: pathing.cdTime,
-            // 倒序：最新 → 最旧，再过滤 > 0 并保留两位小数
-            records: [...pathing.records]   // 复制一份避免副作用
-                .reverse()                 // 倒序
-                .filter(v => v > 0)        // 过滤大于 0
-                .map(v => Number(v.toFixed(2))) // 保留两位小数
+            records: [...pathing.records]
+                .reverse()
+                .filter(v => v > 0)
+                .map(v => Number(v.toFixed(2))),
+            items: pathing.items
         }));
-
         await file.writeText(filePath, JSON.stringify(cdTimeData, null, 2), false);
     } catch (error) {
         log.error(`更新 cdTime 时出错: ${error.message}`);
@@ -1367,44 +1653,6 @@ async function fakeLog(name, isJs, isStart, duration) {
     }
 }
 
-// 更新 pathings 的函数，接受索引文件路径作为参数
-async function updatePathings(indexFilePath) {
-    try {
-        // 读取文件内容
-        const fileContent = await file.readText(indexFilePath);
-        // 将文件内容解析为 JSON 格式
-        const data = JSON.parse(fileContent);
-
-        // 遍历解析后的 JSON 数据
-        for (const item of data) {
-            // 检查 pathings 中是否存在某个对象的 fileName 属性与 item.fileName 相同
-            const existingPathing = pathings.find(pathing => pathing.fileName === item.fileName);
-
-            if (existingPathing) {
-                // 直接覆盖其他字段，但先检查是否存在有效值
-                if (item.时间 !== undefined) existingPathing.t = item.时间;
-                if (item.精英摩拉 !== undefined) existingPathing.mora_e = item.精英摩拉;
-                if (item.小怪摩拉 !== undefined) existingPathing.mora_m = item.小怪摩拉;
-                if (item.小怪数量 !== undefined) existingPathing.m = item.小怪数量;
-                if (item.精英数量 !== undefined) existingPathing.e = item.精英数量;
-
-                // 使用 Set 来存储 tags，避免重复项
-                const tagsSet = new Set(existingPathing.tags);
-                for (const key in item) {
-                    if (key !== "fileName" && key !== "时间" && key !== "精英摩拉" && key !== "小怪摩拉" && key !== "小怪数量" && key !== "精英数量") {
-                        if (item[key] === 1) {
-                            tagsSet.add(key);
-                        }
-                    }
-                }
-                existingPathing.tags = Array.from(tagsSet);
-            }
-        }
-    } catch (error) {
-        log.error("Error:", error);
-    }
-}
-
 //切换队伍
 async function switchPartyIfNeeded(partyName) {
     if (!partyName) {
@@ -1427,72 +1675,70 @@ async function switchPartyIfNeeded(partyName) {
 
 /**
  * 检查当前时间是否处于限制时间内或即将进入限制时间
- * @param {string} timeRule - 时间规则字符串，格式如 "4, 4-6, 10-12"
+ * @param {string} timeRule - 时间规则字符串，格式如 "8, 8-11, 23:11-23:55"
  * @param {number} [threshold=5] - 接近限制时间的阈值（分钟）
  * @returns {Promise<boolean>} - 如果处于限制时间内或即将进入限制时间，则返回 true，否则返回 false
  */
 async function isTimeRestricted(timeRule, threshold = 5) {
-    // 如果输入的时间规则为 undefined 或空字符串，视为不进行时间处理，返回 false
-    if (timeRule === undefined || timeRule === "") {
-        return false;
-    }
+    if (!timeRule) return false;
 
-    // 初始化 0-23 小时为可用状态
-    const hours = Array(24).fill(false);
+    // 兼容中英文逗号、冒号
+    const ruleClean = timeRule
+        .replace(/，/g, ',')
+        .replace(/：/g, ':');
 
-    // 解析时间规则
-    const rules = timeRule.split('，').map(rule => rule.trim());
-
-    // 校验输入的字符串是否符合规则
-    for (const rule of rules) {
-        if (rule.includes('-')) {
-            // 处理时间段，如 "4-6"
-            const [startHour, endHour] = rule.split('-').map(Number);
-            if (isNaN(startHour) || isNaN(endHour) || startHour < 0 || startHour >= 24 || endHour <= startHour || endHour > 24) {
-                // 如果时间段格式不正确或超出范围，则报错并返回 true
-                log.error("时间填写不符合规则，请检查");
-                return true;
-            }
-            for (let i = startHour; i < endHour; i++) {
-                hours[i] = true; // 标记为不可用
-            }
-        } else {
-            // 处理单个时间点，如 "4"
-            const hour = Number(rule);
-            if (isNaN(hour) || hour < 0 || hour >= 24) {
-                // 如果时间点格式不正确或超出范围，则报错并返回 true
-                log.error("时间填写不符合规则，请检查");
-                return true;
-            }
-            hours[hour] = true; // 标记为不可用
-        }
-    }
-
-    // 获取当前时间
     const now = new Date();
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
+    const currentTotal = currentHour * 60 + currentMinute;
 
-    // 检查当前时间是否处于限制时间内
-    if (hours[currentHour]) {
-        log.warn("处于限制时间内");
-        return true; // 当前时间处于限制时间内
-    }
+    for (const seg of ruleClean.split(',').map(s => s.trim())) {
+        if (!seg) continue;
 
-    // 检查当前时间是否即将进入限制时间
-    for (let i = 0; i < 24; i++) {
-        if (hours[i]) {
-            const nextHour = i;
-            const timeUntilNextHour = (nextHour - currentHour - 1) * 60 + (60 - currentMinute);
-            if (timeUntilNextHour > 0 && timeUntilNextHour <= threshold) {
-                // 如果距离下一个限制时间小于等于阈值，则等待到限制时间开始
-                log.warn("接近限制时间，开始等待至限制时间");
-                await genshin.tpToStatueOfTheSeven();
-                await sleep(timeUntilNextHour * 60 * 1000);
-                return true;
+        let startStr, endStr;
+        if (seg.includes('-')) {
+            [startStr, endStr] = seg.split('-').map(s => s.trim());
+        } else {
+            startStr = endStr = seg.trim();
+        }
+
+        const parseTime = (str, isEnd) => {
+            if (str.includes(':')) {
+                const [h, m] = str.split(':').map(Number);
+                return { h, m };
             }
+            // 单独小时：start 8→8:00，end 8→8:59
+            const h = Number(str);
+            return { h, m: isEnd ? 59 : 0 };
+        };
+
+        const start = parseTime(startStr, false);
+        const end = parseTime(endStr, true);
+
+        const startTotal = start.h * 60 + start.m;
+        const endTotal = end.h * 60 + end.m;
+
+        const effectiveEnd = endTotal >= startTotal ? endTotal : endTotal + 24 * 60;
+
+        if (
+            (currentTotal >= startTotal && currentTotal < effectiveEnd) ||
+            (currentTotal + 24 * 60 >= startTotal && currentTotal + 24 * 60 < effectiveEnd)
+        ) {
+            log.warn("处于限制时间内");
+            return true;
+        }
+
+        let nextStartTotal = startTotal;
+        if (nextStartTotal <= currentTotal) nextStartTotal += 24 * 60;
+        const waitMin = nextStartTotal - currentTotal;
+        if (waitMin > 0 && waitMin <= threshold) {
+            log.warn(`接近限制时间，等待 ${waitMin} 分钟`);
+            await genshin.tpToStatueOfTheSeven();
+            await sleep(waitMin * 60 * 1000);
+            return true;
         }
     }
+
     log.info("不处于限制时间");
-    return false; // 当前时间不在限制时间内
+    return false;
 }

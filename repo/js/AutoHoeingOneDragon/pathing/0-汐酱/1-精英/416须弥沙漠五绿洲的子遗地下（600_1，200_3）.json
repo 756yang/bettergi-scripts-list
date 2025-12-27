@@ -1,4 +1,4 @@
-﻿{
+{
   "info": {
     "author": "汐",
     "authors": [
@@ -8,7 +8,8 @@
       }
     ],
     "bgi_version": "0.45.0",
-    "description": "  路线信息：该路线预计用时114秒，包含4只精英，预计收入1200摩拉，包含以下怪物：1只遗迹重机、1只元能构装体·力场发生器、1只元能构装体·重塑仪、1只元能构装体·勘探机。",
+    "description": "  路线信息：该路线预计用时113.26秒，包含以下怪物：1只遗迹重机、1只元能构装体·力场发生器、1只元能构装体·重塑仪、1只元能构装体·勘探机。",
+    "hash_res": "98248530",
     "enable_monster_loot_split": false,
     "last_modified_time": 1758823398910,
     "map_match_method": "",
@@ -41,7 +42,7 @@
       "action": "fight",
       "action_params": "",
       "id": 3,
-      "move_mode": "run",
+      "move_mode": "dash",
       "type": "path",
       "x": 4746.630000000001,
       "y": -263.02000000000044
@@ -50,7 +51,7 @@
       "action": "",
       "action_params": "",
       "id": 4,
-      "move_mode": "run",
+      "move_mode": "dash",
       "type": "path",
       "x": 4746.630000000001,
       "y": -263.02000000000044
@@ -114,7 +115,7 @@
       "action": "fight",
       "action_params": "",
       "id": 11,
-      "move_mode": "run",
+      "move_mode": "dash",
       "type": "path",
       "x": 4766.91,
       "y": -290.0799999999999

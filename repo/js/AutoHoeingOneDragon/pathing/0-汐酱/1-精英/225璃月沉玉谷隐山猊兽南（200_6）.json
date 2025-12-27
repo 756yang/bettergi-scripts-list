@@ -4,7 +4,8 @@
     "type": "collect",
     "author": "汐",
     "version": "1.0",
-    "description": "  路线信息：该路线预计用时94秒，包含6只精英与1只小怪，预计收入1240.5摩拉，包含以下怪物：1只射手丘丘人、6只玄文兽。",
+    "description": "  路线信息：该路线预计用时125.16秒，包含以下怪物：1只射手丘丘人、6只玄文兽。",
+    "hash_res": "19218537",
     "map_name": "Teyvat",
     "bgi_version": "0.45.0",
     "authors": [
@@ -28,7 +29,7 @@
       "x": 2160.58,
       "y": 1217.25,
       "action": "fight",
-      "move_mode": "run",
+      "move_mode": "dash",
       "type": "path"
     },
     {
@@ -36,7 +37,7 @@
       "x": 2171,
       "y": 1169.38,
       "action": "",
-      "move_mode": "run",
+      "move_mode": "dash",
       "action_params": "",
       "type": "path"
     },
@@ -45,7 +46,7 @@
       "x": 2198.5,
       "y": 1148.25,
       "action": "",
-      "move_mode": "run",
+      "move_mode": "dash",
       "type": "path"
     },
     {

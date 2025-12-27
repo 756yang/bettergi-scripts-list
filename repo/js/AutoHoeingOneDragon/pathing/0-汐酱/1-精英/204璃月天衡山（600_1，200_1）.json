@@ -1,10 +1,11 @@
-﻿{
+{
   "info": {
     "name": "204璃月天衡山（600_1，200_1）",
     "type": "collect",
     "author": "汐",
     "version": "1.0",
-    "description": "  路线信息：该路线预计用时85秒，包含2只精英与3只小怪，预计收入921.5摩拉，包含以下怪物：2只打手丘丘人、1只射手丘丘人、1只幼岩龙蜥、1只岩龙蜥。",
+    "description": "  路线信息：该路线预计用时99.61秒，包含以下怪物：2只打手丘丘人、1只射手丘丘人、1只幼岩龙蜥、1只岩龙蜥。",
+    "hash_res": "01494282",
     "bgi_version": "0.45.0",
     "authors": [
       {
@@ -33,7 +34,7 @@
       "x": 616.28,
       "y": -223.27,
       "action": "",
-      "move_mode": "run",
+      "move_mode": "dash",
       "action_params": "",
       "type": "path"
     },
@@ -42,7 +43,7 @@
       "x": 627.26,
       "y": -174,
       "action": "fight",
-      "move_mode": "run",
+      "move_mode": "dash",
       "action_params": "",
       "type": "path"
     },
@@ -51,7 +52,7 @@
       "x": 642,
       "y": -162.5,
       "action": "fight",
-      "move_mode": "run",
+      "move_mode": "dash",
       "action_params": "",
       "type": "path"
     },
@@ -60,7 +61,7 @@
       "x": 607.5,
       "y": -124.25,
       "action": "combat_script",
-      "move_mode": "run",
+      "move_mode": "dash",
       "action_params": "wait(0.5),keypress(f);芙宁娜 e;玛薇卡 e;爱可菲 e;伊涅芙 e;",
       "type": "path"
     },
@@ -78,7 +79,7 @@
       "x": 597.14,
       "y": -101.94,
       "action": "",
-      "move_mode": "run",
+      "move_mode": "dash",
       "action_params": "",
       "type": "path"
     },
@@ -87,7 +88,7 @@
       "x": 595.14,
       "y": -85.94,
       "action": "",
-      "move_mode": "run",
+      "move_mode": "dash",
       "action_params": "",
       "type": "path"
     },
@@ -96,7 +97,7 @@
       "x": 590,
       "y": -97.75,
       "action": "fight",
-      "move_mode": "run",
+      "move_mode": "dash",
       "action_params": "",
       "type": "path"
     },
@@ -105,7 +106,7 @@
       "x": 590,
       "y": -97.75,
       "action": "combat_script",
-      "move_mode": "run",
+      "move_mode": "dash",
       "action_params": "wait(0.2)",
       "type": "orientation"
     }

@@ -1,4 +1,4 @@
-﻿{
+{
   "info": {
     "authors": [
       {
@@ -9,7 +9,7 @@
     "bgi_version": "0.45.0",
     "description": "",
     "enable_monster_loot_split": false,
-    "last_modified_time": 1758044046373,
+    "last_modified_time": 1766156653809,
     "map_match_method": "",
     "map_name": "TheChasm",
     "name": "98【额外】璃月-层岩地下1",

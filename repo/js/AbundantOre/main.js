@@ -1,7 +1,7 @@
 function forge_pathing_start_log(name) {
     const t = new Date();
     const timestamp = t.toTimeString().slice(0, 8) + "." + String(t.getMilliseconds()).padStart(3, "0");
-    var c = "Forging start log\n\n";
+    let c = "Forging start log\n\n";
     c += `[${timestamp}] [INF] BetterGenshinImpact.Service.ScriptService\n------------------------------\n\n`;
     c += `[${timestamp}] [INF] BetterGenshinImpact.Service.ScriptService\n→ 开始执行地图追踪任务: "${name}"`;
     log.debug(c);
@@ -12,14 +12,14 @@ function forge_pathing_end_log(name, elapsed_time) {
     const elapsed_sec = (elapsed_time / 1000 % 60).toFixed(3);
     const t = new Date();
     const timestamp = t.toTimeString().slice(0, 8) + "." + String(t.getMilliseconds()).padStart(3, "0");
-    var c = "Forging end log\n\n";
+    let c = "Forging end log\n\n";
     c += `[${timestamp}] [INF] BetterGenshinImpact.Service.ScriptService\n→ 脚本执行结束: "${name}", 耗时: ${elapsed_min}分${elapsed_sec}秒\n\n`;
     c += `[${timestamp}] [INF] BetterGenshinImpact.Service.ScriptService\n------------------------------`;
     log.debug(c);
 }
 
 function get_exclude_tags() {
-    var tags = [];
+    let tags = [];
     if (settings.fight_option === "全跳过") {
         tags.push("fight");
     } else if (settings.fight_option === "只跳过与精英怪战斗的路线") {
@@ -77,7 +77,7 @@ function get_profile_name() {
 const filename_to_path_map = {};
 
 function load_filename_to_path_map() {
-    var all_paths = [];
+    let all_paths = [];
     const read_dir = (path) => {
         for (const i of file.readPathSync(path)) {
             if (file.isFolder(i)) {
@@ -94,11 +94,11 @@ function load_filename_to_path_map() {
     }
 }
 
-var persistent_data = {};
+let persistent_data = {};
 const in_memory_skip_tasks = new Set();
 
 function load_persistent_data() {
-    var file_content = "";
+    let file_content = "";
     try {
         file_content = file.readTextSync("local/persistent_data.json");
     } catch (error) {}
@@ -111,11 +111,11 @@ const disabled_paths = new Set();
 
 function load_disabled_paths() {
     for (const path of ["assets/disabled_paths.conf", "local/disabled_paths.txt"]) {
-        var file_content = "";
+        let file_content = "";
         try {
             file_content = file.readTextSync(path);
         } catch (error) {}
-        for (var l of file_content.split("\n")) {
+        for (let l of file_content.split("\n")) {
             l = l.trim();
             if (l.length === 0) {
                 continue;
@@ -128,10 +128,29 @@ function load_disabled_paths() {
     }
 }
 
-var statistics = {};
+let statistics = {};
 
 function load_statistics_data() {
     statistics = JSON.parse(file.readTextSync("assets/statistics.json")).data;
+}
+
+const flaky_end_paths = new Set();
+
+function load_flaky_end_paths() {
+    let file_content = "";
+    try {
+        file_content = file.readTextSync("assets/flaky_end_paths.conf");
+    } catch (error) {}
+    for (let l of file_content.split("\n")) {
+        l = l.trim();
+        if (l.length === 0) {
+            continue;
+        }
+        if (l.startsWith("//") || l.startsWith("#")) {
+            continue;
+        }
+        flaky_end_paths.add(l);
+    }
 }
 
 async function flush_persistent_data() {
@@ -158,7 +177,7 @@ function get_task_last_run_time(task_name) {
 
 function is_ore_respawned(t) {
     t /= 1000;
-    var t0 = Math.floor(t / 86400) * 86400 + 57600;
+    let t0 = Math.floor(t / 86400) * 86400 + 57600;
     if (t0 > t) {
         t0 -= 86400;
     }
@@ -175,7 +194,7 @@ function get_some_tasks(hints) {
         log.debug("Schedule with target runnning seconds {a}", hints.target_running_seconds);
     }
     const exclude_tags = new Set(get_exclude_tags());
-    var filtered_statistics = [];
+    let filtered_statistics = [];
     for (const [key, value] of Object.entries(statistics)) {
         if (in_memory_skip_tasks.has(key)) {
             continue;
@@ -186,10 +205,10 @@ function get_some_tasks(hints) {
         if (value.tags.some(i => exclude_tags.has(i))) {
             continue;
         }
-        if (value.statistics.avg_num_defeats > 0.1) {
+        if (value.statistics.avg_num_defeats > 0.5) {
             continue;
         }
-        if (value.statistics.avg_abnormal_exits > 0.1) {
+        if (value.statistics.avg_abnormal_exits > 0.5) {
             continue;
         }
         if (!filename_to_path_map.hasOwnProperty(key)) {
@@ -205,9 +224,9 @@ function get_some_tasks(hints) {
     filtered_statistics.sort((a, b) =>
         b[1].statistics.avg_yield_per_min - a[1].statistics.avg_yield_per_min
     );
-    var candidates = [];
-    var sum_yield = 0;
-    var sum_running_seconds = 0;
+    let candidates = [];
+    let sum_yield = 0;
+    let sum_running_seconds = 0;
     for (const [key, value] of filtered_statistics) {
         candidates.push([key, value]);
         sum_yield += value.statistics.avg_yield;
@@ -239,7 +258,7 @@ function get_some_tasks(hints) {
         i.tasks.sort();
     }
     const tasks = Array.from(Object.values(candidate_groups)).sort((a, b) => b.avg_yield_per_min - a.avg_yield_per_min).map(i => i.tasks).flat();
-    var log_content = "";
+    let log_content = "";
     sum_yield = 0;
     sum_running_seconds = 0;
     for (const i of tasks) {
@@ -253,6 +272,25 @@ function get_some_tasks(hints) {
     return tasks.map(i => [i, statistics[i]]);
 }
 
+async function close_expired_stuff_popup_window() {
+    const game_region = captureGameRegion();
+
+    const text_x = 850;
+    const text_y = 273;
+    const text_w = 225;
+    const text_h = 51;
+    const ocr_res = game_region.find(RecognitionObject.ocr(text_x, text_y, text_w, text_h));
+    if (ocr_res) {
+        if (ocr_res.text.includes("物品过期")) {
+            log.info("检测到物品过期");
+            click(1000, 750);
+            await sleep(1000);
+        }
+    }
+
+    game_region.dispose();
+}
+
 async function get_inventory() {
     const ore_image_map = {
         amethyst_lumps: "assets/images/amethyst_lump.png",
@@ -264,6 +302,7 @@ async function get_inventory() {
     await genshin.returnMainUi();
     keyPress("b")
     await sleep(1000);
+    await close_expired_stuff_popup_window();
     click(964, 53);
     await sleep(500);
 
@@ -298,6 +337,7 @@ async function get_inventory() {
             }
         }
     }
+    game_region.dispose();
     if (inventory_result.crystal_chunks + inventory_result.condessence_crystals + inventory_result.amethyst_lumps + inventory_result.rainbowdrop_crystals === 0) {
         log.error("获取背包矿石数量失败");
     }
@@ -305,7 +345,8 @@ async function get_inventory() {
     return inventory_result;
 }
 
-var last_script_end_pos = [null, null];
+let last_script_end_pos = [null, null];
+let last_script_normal_completion = true;
 
 async function run_pathing_script(name, path_state_change, current_states) {
     path_state_change ||= {};
@@ -328,10 +369,10 @@ async function run_pathing_script(name, path_state_change, current_states) {
         }
     }
     log.info("运行 {name}", name);
-    var json_content = await file.readText(filename_to_path_map[name]);
+    let json_content = await file.readText(filename_to_path_map[name]);
     {
         const json_obj = JSON.parse(json_content);
-        var modified = false;
+        let modified = false;
         for (const i of json_obj.positions) {
             if (use_global_mining_action) {
                 if (settings.custom_mining_action && i.action === "combat_script" && i.action_params.includes("诺艾尔 ")) {
@@ -365,29 +406,37 @@ async function run_pathing_script(name, path_state_change, current_states) {
     if (!cancellation_token.isCancellationRequested) {
         const curr_pos = (() => {
             try {
-                const p = genshin.getPositionFromMap();
+                const p = genshin.getPositionFromMap(JSON.parse(json_content).info.map_name);
                 return [p.X, p.Y];
             } catch (e) {}
             return [null, null];
         })();
-        var character_moved = false;
+        log.debug("Character current pos ({x},{y})", curr_pos[0], curr_pos[1]);
+        let character_moved = false;
         if (curr_pos[0] === null || last_script_end_pos[0] === null) {
-            character_moved = curr_pos !== last_script_end_pos;
+            character_moved = curr_pos[0] !== last_script_end_pos[0] || curr_pos[1] !== last_script_end_pos[1];
             log.debug("Character {action}", character_moved ? "moved" : "not moved");
         } else {
             const dist = Math.sqrt(Math.pow(curr_pos[0] - last_script_end_pos[0], 2) + Math.pow(curr_pos[1] - last_script_end_pos[1], 2));
             character_moved = dist > 5;
             log.debug("Character moved distance of {dist}", dist);
         }
+        if (!character_moved && flaky_end_paths.has(name) && last_script_normal_completion) {
+            log.debug("Assuming script successfully completed");
+            character_moved = true;
+        }
         last_script_end_pos = curr_pos;
         if (elapsed_time <= 5000) {
             in_memory_skip_tasks.add(name);
             log.warn("脚本运行时间小于5秒，可能发生了错误，不写记录");
+            last_script_normal_completion = false;
         } else if (!character_moved) {
             in_memory_skip_tasks.add(name);
             log.warn("角色未移动，可能发生了错误，不写记录");
+            last_script_normal_completion = false;
         } else {
             await mark_task_finished(name);
+            last_script_normal_completion = true;
         }
     } else {
         throw new Error("Cancelled");
@@ -403,10 +452,13 @@ async function run_pathing_script(name, path_state_change, current_states) {
 
 async function main() {
     await genshin.returnMainUi();
+    file.writeTextSync("local/disabled_paths.txt", "", true);
+    file.writeTextSync("local/persistent_data.json", "", true);
     load_filename_to_path_map();
     load_persistent_data();
     load_disabled_paths();
     load_statistics_data();
+    load_flaky_end_paths();
     dispatcher.addTimer(new RealtimeTimer("AutoPick"));
     // Run an empty pathing script to give BGI a chance to switch team if the user specifies one.
     await pathingScript.runFile("assets/empty_pathing.json");
@@ -418,7 +470,7 @@ async function main() {
     }
 
     const get_current_cst_hour = () => (Date.now() / 1000 + 8 * 3600) % 86400 / 3600;
-    var run_until_unix_time = settings.target_running_minutes ? (Date.now() + Number(settings.target_running_minutes) * 60 * 1000) : null;
+    let run_until_unix_time = settings.target_running_minutes ? (Date.now() + Number(settings.target_running_minutes) * 60 * 1000) : null;
     if (settings.time_range) {
         const time_range = settings.time_range.replace("～", "~").replace("：", ":");
         if (time_range.includes("~")) {
@@ -466,12 +518,12 @@ async function main() {
     }
 
     const start_time = Date.now();
-    var last_log_progress_time = 0;
-    var accurate_yield = 0;
-    var estimated_yield = 0;
-    var cached_inventory_data = original_inventory;
+    let last_log_progress_time = 0;
+    let accurate_yield = 0;
+    let estimated_yield = 0;
+    let cached_inventory_data = original_inventory;
 
-    var finished = false;
+    let finished = false;
     const current_states = new Set();
     while (!finished) {
         const hints = {
@@ -480,7 +532,7 @@ async function main() {
         };
         {
             const now = Math.floor(Date.now() / 1000);
-            var next_refresh_unix_time = Math.floor(now / 86400) * 86400 + 16 * 3600;
+            let next_refresh_unix_time = Math.floor(now / 86400) * 86400 + 16 * 3600;
             next_refresh_unix_time += 180; // to avoid the effect of clock skew
             if (next_refresh_unix_time < now) {
                 next_refresh_unix_time += 86400;
@@ -529,14 +581,16 @@ async function main() {
             }
             if (Date.now() - last_log_progress_time > 30000) {
                 last_log_progress_time = Date.now();
-                if (target_yield !== null) {
+                {
                     const estimated_prompt = estimated_yield === accurate_yield ? "" : "（预计）";
-                    log.info(`当前产出${estimated_prompt}：${Math.round(estimated_yield)}/${target_yield}个`);
-                }
-                if (run_until_unix_time !== null) {
-                    const running_minutes = ((Date.now() - start_time) / 1000 / 60).toFixed(2);
-                    const total_minutes = Math.round((run_until_unix_time - start_time) / 60 / 1000);
-                    log.info(`当前运行时间：${running_minutes}/${total_minutes}分钟`);
+                    const target_yield_prompt = target_yield === null ? "" : `/${target_yield}`;
+                    log.info(`当前产出${estimated_prompt}：${Math.round(estimated_yield)}${target_yield_prompt}个`);
+                    // For ABGI only
+                    log.debug(`当前进度：${Math.round(estimated_yield)}${target_yield_prompt}个`);
+                } {
+                    const running_minutes = ((Date.now() - start_time) / 1000 / 60).toFixed(1);
+                    const total_minutes_prompt = run_until_unix_time === null ? "" : `/${Math.round((run_until_unix_time - start_time) / 60 / 1000)}`;
+                    log.info(`当前运行时间：${running_minutes}${total_minutes_prompt}分钟`);
                 }
             }
         }
@@ -544,7 +598,7 @@ async function main() {
 
     const end_time = Date.now();
     const running_minutes = (end_time - start_time) / 1000 / 60;
-    var total_yield_str = [];
+    let total_yield_str = [];
     const latest_inventory = cached_inventory_data ? cached_inventory_data : (await get_inventory());
     if (latest_inventory.crystal_chunks - original_inventory.crystal_chunks) {
         total_yield_str.push(`${latest_inventory.crystal_chunks - original_inventory.crystal_chunks}水晶块`);

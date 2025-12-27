@@ -1,4 +1,4 @@
-﻿{
+{
   "info": {
     "author": "汐",
     "authors": [
@@ -8,7 +8,8 @@
       }
     ],
     "bgi_version": "0.45.0",
-    "description": "  路线信息：该路线预计用时99秒，包含2只精英与5只小怪，预计收入1202.5摩拉，包含以下怪物：1只冰盾丘丘人、3只冰箭丘丘人、1只冰盾丘丘暴徒、1只丘丘霜铠王、1只冰丘丘萨满。",
+    "description": "  路线信息：该路线预计用时106.33秒，包含以下怪物：2只冰盾丘丘人、3只冰箭丘丘人、1只冰弹丘丘人、1只冰盾丘丘暴徒、1只丘丘霜铠王、1只冰丘丘萨满。",
+    "hash_res": "08530558",
     "enable_monster_loot_split": false,
     "last_modified_time": 1759382201069,
     "map_match_method": "",
@@ -41,7 +42,7 @@
       "action": "",
       "action_params": "",
       "id": 3,
-      "move_mode": "run",
+      "move_mode": "dash",
       "type": "path",
       "x": -390.130000000001,
       "y": 1114.2099999999991
@@ -68,7 +69,7 @@
       "action": "",
       "action_params": "",
       "id": 6,
-      "move_mode": "run",
+      "move_mode": "dash",
       "type": "path",
       "x": -368.25007110149454,
       "y": 1058.6270311671033
@@ -77,7 +78,7 @@
       "action": "",
       "action_params": "",
       "id": 7,
-      "move_mode": "run",
+      "move_mode": "dash",
       "type": "path",
       "x": -368.7400000000016,
       "y": 1038.7999999999993

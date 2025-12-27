@@ -1,10 +1,11 @@
-﻿{
+{
   "info": {
     "name": "304稻妻九条海滩（600_1，200_2）",
     "type": "collect",
     "author": "汐",
     "version": "1.0",
-    "description": "  路线信息：该路线预计用时183秒，包含3只精英与17只小怪，预计收入1769.5摩拉，包含以下怪物：3只火史莱姆、2只丘丘人、1只打手丘丘人、1只火箭丘丘人、1只冰箭丘丘人、1只丘丘雷兜王、1只风丘丘萨满、1只火深渊法师、1只雷深渊法师、1只盗宝团·斥候、1只盗宝团·火之药剂师、1只盗宝团·雷之药剂师、3只野伏·火伏番、2只海乱鬼·炎威。",
+    "description": "  路线信息：该路线预计用时181.66秒，包含以下怪物：3只火史莱姆、2只丘丘人、1只打手丘丘人、1只火箭丘丘人、1只冰箭丘丘人、1只丘丘雷兜王、1只风丘丘萨满、1只火深渊法师、1只雷深渊法师、1只盗宝团·斥候、1只盗宝团·火之药剂师、1只盗宝团·雷之药剂师、3只野伏·火伏番、2只海乱鬼·炎威。",
+    "hash_res": "03882928",
     "bgi_version": "0.45.0",
     "authors": [
       {
@@ -51,7 +52,7 @@
       "x": -3363.95,
       "y": -3271.77,
       "action": "",
-      "move_mode": "run",
+      "move_mode": "dash",
       "action_params": "",
       "type": "path"
     },
@@ -60,7 +61,7 @@
       "x": -3379.63,
       "y": -3260.94,
       "action": "",
-      "move_mode": "run",
+      "move_mode": "dash",
       "action_params": "",
       "type": "path"
     },
@@ -69,7 +70,7 @@
       "x": -3384.86,
       "y": -3234.99,
       "action": "",
-      "move_mode": "run",
+      "move_mode": "dash",
       "action_params": "",
       "type": "path"
     },
@@ -78,7 +79,7 @@
       "x": -3353.56,
       "y": -3222.27,
       "action": "combat_script",
-      "move_mode": "run",
+      "move_mode": "dash",
       "action_params": "attack(0.5)",
       "type": "path"
     },
@@ -132,7 +133,7 @@
       "x": -3437.87,
       "y": -3173.36,
       "action": "",
-      "move_mode": "run",
+      "move_mode": "dash",
       "action_params": "",
       "type": "path"
     },
@@ -141,7 +142,7 @@
       "x": -3456.7,
       "y": -3136.63,
       "action": "fight",
-      "move_mode": "run",
+      "move_mode": "dash",
       "action_params": "",
       "type": "path"
     },
@@ -150,7 +151,7 @@
       "x": -3477.19,
       "y": -3156.25,
       "action": "",
-      "move_mode": "run",
+      "move_mode": "dash",
       "action_params": "",
       "type": "path"
     },
@@ -159,7 +160,7 @@
       "x": -3524.16,
       "y": -3163.04,
       "action": "fight",
-      "move_mode": "run",
+      "move_mode": "dash",
       "action_params": "",
       "type": "path"
     }

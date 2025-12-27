@@ -1,4 +1,4 @@
-﻿{
+{
   "info": {
     "author": "汐",
     "authors": [
@@ -8,7 +8,8 @@
       }
     ],
     "bgi_version": "0.45.0",
-    "description": "  路线信息：该路线预计用时131秒，包含7只精英与8只小怪，预计收入1724摩拉，包含以下怪物：1只水史莱姆、2只丘丘人、1只打手丘丘人、3只火箭丘丘人、1只雷箭丘丘人、1只岩盾丘丘暴徒、1只火斧丘丘暴徒、2只元能构装体·力场发生器、1只元能构装体·重塑仪、2只元能构装体·勘探机。",
+    "description": "  路线信息：该路线预计用时161.07秒，包含以下怪物：1只水史莱姆、2只丘丘人、1只打手丘丘人、3只火箭丘丘人、1只雷箭丘丘人、1只岩盾丘丘暴徒、1只火斧丘丘暴徒、2只元能构装体·力场发生器、1只元能构装体·重塑仪、2只元能构装体·勘探机。",
+    "hash_res": "70850745",
     "enable_monster_loot_split": false,
     "last_modified_time": 1760031738671,
     "map_match_method": "",
@@ -32,7 +33,7 @@
       "action": "fight",
       "action_params": "",
       "id": 2,
-      "move_mode": "run",
+      "move_mode": "dash",
       "type": "path",
       "x": 4832.130000000001,
       "y": -1428.5500000000002
@@ -41,7 +42,7 @@
       "action": "fight",
       "action_params": "",
       "id": 3,
-      "move_mode": "run",
+      "move_mode": "dash",
       "type": "path",
       "x": 4826.130000000001,
       "y": -1348.5500000000002
@@ -77,7 +78,7 @@
       "action": "fight",
       "action_params": "",
       "id": 7,
-      "move_mode": "run",
+      "move_mode": "dash",
       "type": "path",
       "x": 4807.25,
       "y": -1266.75

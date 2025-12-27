@@ -29,8 +29,8 @@ const doDecompose2Ro = RecognitionObject.TemplateMatch(file.ReadImageMatSync("as
 
 const outDatedRo = RecognitionObject.TemplateMatch(file.ReadImageMatSync("assets/RecognitionObject/ConfirmButton.png"), 760, 700, 100, 100);
 
-const normalPathA = "assets/ArtifactsPath/普通A";
-const normalPathB = "assets/ArtifactsPath/普通B";
+const normalPathA = "assets/ArtifactsPath/普通98点1号线";
+const normalPathB = "assets/ArtifactsPath/普通98点2号线";
 const normalPathC = "assets/ArtifactsPath/普通C";
 const extraPath = "assets/ArtifactsPath/额外";
 
@@ -47,6 +47,15 @@ let furinaState = "unknown";
 let targetItems;
 let pickupDelay = 100;
 let timeMove = 1000;
+let findFInterval = (+settings.findFInterval || 100);
+if (findFInterval < 16) {
+    findFInterval = 16;
+}
+if (findFInterval > 200) {
+    findFInterval = 200;
+}
+let lastRoll = new Date();
+let checkDelay = Math.round(findFInterval / 2);
 let timeMoveUp = Math.round(timeMove * 0.45);
 let timeMoveDown = Math.round(timeMove * 0.55);
 let rollingDelay = 25;
@@ -129,15 +138,43 @@ let gameRegion;
     moraDiff += await mora();
     log.info(`狗粮路线获取摩拉: ${moraDiff}`);
     log.info(`狗粮路线获取狗粮经验: ${artifactExperienceDiff}`);
-    //修改records
-    for (let i = record.records.length - 1; i > 0; i--) {
-        record.records[i] = record.records[i - 1];
+    // ========== 主流程末尾：替换原来的“修改records”区块 ==========
+    const todayKey = `日期:${record.lastRunDate}，运行收尾路线${record.lastRunEndingRoute}`;
+    let merged = false;
+
+    // 先扫描数组，找同一天同收尾路线
+    for (let i = 0; i < record.records.length; i++) {
+        const line = record.records[i];
+        if (line && line.startsWith(todayKey)) {
+            // 解析原记录的经验、摩拉
+            const match = line.match(/狗粮经验(-?\d+)，摩拉(-?\d+)/);
+            if (match) {
+                const oldExp = Number(match[1]);
+                const oldMora = Number(match[2]);
+                // 累加并取正
+                const newExp = Math.max(0, oldExp + artifactExperienceDiff);
+                const newMora = Math.max(0, oldMora + moraDiff);
+                record.records[i] = `${todayKey}，狗粮经验${newExp}，摩拉${newMora}`;
+                merged = true;
+                log.info(`检测到同日记录，已合并更新：经验 ${newExp}，摩拉 ${newMora}`);
+            }
+            break; // 同一天只可能有一条，找到就停
+        }
     }
-    record.records[0] = `日期:${record.lastRunDate}，运行收尾路线${record.lastRunEndingRoute}，狗粮经验${artifactExperienceDiff}，摩拉${moraDiff}`;
+
+    // 如果没找到同一天，再走原来的“整体后移插新记录”逻辑
+    if (!merged) {
+        for (let i = record.records.length - 1; i > 0; i--) {
+            record.records[i] = record.records[i - 1];
+        }
+        record.records[0] = `${todayKey}，狗粮经验${Math.max(0, artifactExperienceDiff)}，摩拉${Math.max(0, moraDiff)}`;
+    }
+
+    // 通知与写盘保持不变
     if (settings.notify) {
-        notification.Send(`日期:${record.lastRunDate}，运行收尾路线${record.lastRunEndingRoute}，狗粮经验${artifactExperienceDiff}，摩拉${moraDiff}`);
+        notification.Send(`${todayKey}，狗粮经验${Math.max(0, artifactExperienceDiff)}，摩拉${Math.max(0, moraDiff)}`);
     }
-    await writeRecord(accountName);//修改记录文件
+    await writeRecord(accountName);
 
 })();
 
@@ -186,7 +223,7 @@ async function readRecord(accountName) {
         lastRunDate: "1970/01/01",
         lastActivateTime: new Date("1970-01-01T20:00:00.000Z"),
         lastRunEndingRoute: "收尾额外A",
-        records: new Array(14).fill(""),
+        records: new Array(33550336).fill(""),
         version: ""
     };
 
@@ -606,7 +643,7 @@ async function mora() {
                 // 尝试识别图像
                 const gameRegion = captureGameRegion();
                 let imageResult = gameRegion.find(recognitionObject);
-                gameRegion.dispose;
+                gameRegion.dispose();
                 if (imageResult) {
                     // log.info(`成功识别图像，坐标: x=${imageResult.x}, y=${imageResult.y}`);
                     // log.info(`图像尺寸: width=${imageResult.width}, height=${imageResult.height}`);
@@ -1103,10 +1140,10 @@ async function parsePathing(pathFilePath) {
             return { ok: false };
         }
 
-        // map_name 不存在时兜底为 "Teyvat"
+        // 从 info.map_name 读取，不存在时兜底为 "Teyvat"
         const map_name =
-            typeof json.map_name === 'string' && json.map_name.trim() !== ''
-                ? json.map_name
+            typeof json.info?.map_name === 'string' && json.info.map_name.trim() !== ''
+                ? json.info.map_name
                 : 'Teyvat';
 
         // 从后往前找第一个 type !== "orientation" 的点
@@ -1288,7 +1325,12 @@ async function recognizeAndInteract() {
         gameRegion = captureGameRegion();
         let centerYF = await findFIcon();
         if (!centerYF) {
-            if (await isMainUI()) await keyMouseScript.runFile(`assets/滚轮下翻.json`);
+            if (await isMainUI()) {
+                if (new Date() - lastRoll >= 200) {
+                    await keyMouseScript.runFile(`assets/滚轮下翻.json`);
+                    lastRoll = new Date();
+                }
+            }
             continue;
         }
         //log.info(`调试-成功找到f图标,centerYF为${centerYF}`);
@@ -1338,7 +1380,16 @@ async function recognizeAndInteract() {
             let result;
             let itemName = null;
             for (const targetItem of targetItems) {
-                let recognitionObject = RecognitionObject.TemplateMatch(targetItem.template, 1219, centerYF - 15, 32 + 30 * (targetItem.itemName.length) + 2, 30);
+                //log.info(`正在尝试匹配${targetItem.itemName}`);
+                const cnLen = Math.min([...targetItem.itemName].filter(c => c >= '\u4e00' && c <= '\u9fff').length, 5);
+                const recognitionObject = RecognitionObject.TemplateMatch(
+                    targetItem.template,
+                    1219,
+                    centerYF - 15,
+                    12 + 28 * cnLen + 2,
+                    30
+                );
+
                 recognitionObject.Threshold = TMthreshold;
                 recognitionObject.InitTemplate();
                 result = gameRegion.find(recognitionObject);
@@ -1368,7 +1419,7 @@ async function recognizeAndInteract() {
             if (!state.running)
                 return null;
         }
-        await sleep(100);
+        await sleep(checkDelay);
         return null;
     }
 
@@ -1387,7 +1438,7 @@ async function recognizeAndInteract() {
                 return false;
             }
             attempts++;
-            await sleep(50);
+            await sleep(checkDelay);
         }
         return false;
     }

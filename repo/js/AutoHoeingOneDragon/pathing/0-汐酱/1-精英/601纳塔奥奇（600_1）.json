@@ -1,10 +1,11 @@
-﻿{
+{
   "info": {
     "name": "601纳塔奥奇（600_1）",
     "type": "collect",
     "author": "汐",
     "version": "1.0",
-    "description": "  路线信息：该路线预计用时56秒，包含1只精英，预计收入600摩拉，包含以下怪物：1只遗迹重机。",
+    "description": "  路线信息：该路线预计用时57.08秒，包含以下怪物：1只遗迹重机。",
+    "hash_res": "92891237",
     "bgi_version": "0.45.0",
     "authors": [
       {
@@ -33,7 +34,7 @@
       "x": 10060.249877547429,
       "y": 79.25051537075797,
       "action": "",
-      "move_mode": "run",
+      "move_mode": "dash",
       "action_params": "",
       "type": "path"
     },
@@ -42,7 +43,7 @@
       "x": 10035.6904296875,
       "y": 115.00634765625,
       "action": "fight",
-      "move_mode": "run",
+      "move_mode": "dash",
       "action_params": "",
       "type": "path",
       "locked": false
@@ -52,7 +53,7 @@
       "x": 10035.6904296875,
       "y": 115.00634765625,
       "action": "combat_script",
-      "move_mode": "run",
+      "move_mode": "dash",
       "action_params": "wait(0.2)",
       "type": "orientation"
     }

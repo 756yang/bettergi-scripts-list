@@ -1,4 +1,4 @@
-﻿{
+{
   "info": {
     "author": "汐",
     "authors": [
@@ -8,7 +8,8 @@
       }
     ],
     "bgi_version": "0.45.0",
-    "description": "  路线信息：该路线预计用时123秒，包含3只精英与5只小怪，预计收入1283.5摩拉，包含以下怪物：3只风史莱姆、2只大型风史莱姆、1只狂风之核、1只木盾丘丘暴徒、1只火斧丘丘暴徒。",
+    "description": "  路线信息：该路线预计用时151.19秒，包含以下怪物：3只风史莱姆、2只大型风史莱姆、1只狂风之核、1只木盾丘丘暴徒、1只火斧丘丘暴徒。",
+    "hash_res": "39595940",
     "enable_monster_loot_split": false,
     "last_modified_time": 1758985740751,
     "map_match_method": "",
@@ -32,7 +33,7 @@
       "action": "",
       "action_params": "",
       "id": 2,
-      "move_mode": "run",
+      "move_mode": "dash",
       "type": "path",
       "x": 303,
       "y": 2533
@@ -140,7 +141,7 @@
       "action": "fight",
       "action_params": "",
       "id": 14,
-      "move_mode": "run",
+      "move_mode": "dash",
       "type": "path",
       "x": 361.68,
       "y": 2448.93
@@ -149,7 +150,7 @@
       "action": "",
       "action_params": "",
       "id": 15,
-      "move_mode": "run",
+      "move_mode": "dash",
       "type": "path",
       "x": 379.77,
       "y": 2433.81

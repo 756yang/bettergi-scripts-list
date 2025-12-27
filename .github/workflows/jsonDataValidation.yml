@@ -296,7 +296,7 @@ jobs:
           echo "🔍 开始地图追踪目录结构校验..."
           : > validation_output.log
           set +e
-          python build/validate.py "repo/pathing" --fix 2>&1 | tee -a validation_output.log
+          python build/validate.py "repo/pathing" --structure 2>&1 | tee -a validation_output.log
           PY_EXIT=$?
           set -e
           

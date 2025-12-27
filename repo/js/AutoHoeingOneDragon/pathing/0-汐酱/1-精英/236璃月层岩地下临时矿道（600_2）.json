@@ -1,4 +1,4 @@
-﻿{
+{
   "info": {
     "author": "汐",
     "authors": [
@@ -8,7 +8,8 @@
       }
     ],
     "bgi_version": "0.45.0",
-    "description": "  路线信息：该路线预计用时85秒，包含2只精英，预计收入1200摩拉，包含以下怪物：1只黯色空壳·近卫、1只岩龙蜥。",
+    "description": "  路线信息：该路线预计用时99.45秒，包含以下怪物：1只黯色空壳·近卫、1只岩龙蜥。",
+    "hash_res": "87243908",
     "enable_monster_loot_split": false,
     "last_modified_time": 1760207025389,
     "map_match_method": "",
@@ -32,7 +33,7 @@
       "action": "",
       "action_params": "",
       "id": 2,
-      "move_mode": "run",
+      "move_mode": "dash",
       "type": "path",
       "x": 906.97,
       "y": 1020.3800000000001
@@ -68,7 +69,7 @@
       "action": "fight",
       "action_params": "",
       "id": 6,
-      "move_mode": "run",
+      "move_mode": "dash",
       "type": "path",
       "x": 957.53,
       "y": 1050.34
@@ -86,7 +87,7 @@
       "action": "",
       "action_params": "",
       "id": 8,
-      "move_mode": "run",
+      "move_mode": "dash",
       "type": "path",
       "x": 927.04,
       "y": 1057.34
@@ -113,7 +114,7 @@
       "action": "fight",
       "action_params": "",
       "id": 11,
-      "move_mode": "run",
+      "move_mode": "dash",
       "type": "path",
       "x": 849.6700000000001,
       "y": 1064.23
@@ -122,7 +123,7 @@
       "action": "combat_script",
       "action_params": "wait(0.2)",
       "id": 12,
-      "move_mode": "run",
+      "move_mode": "dash",
       "type": "orientation",
       "x": 849.6700000000001,
       "y": 1064.23

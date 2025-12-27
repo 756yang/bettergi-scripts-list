@@ -4,7 +4,8 @@
     "type": "collect",
     "author": "汐",
     "version": "1.0",
-    "description": "  路线信息：该路线预计用时249.9秒，包含11只精英与3只小怪，预计收入2964.5摩拉，包含以下怪物：1只木盾丘丘暴徒、1只火斧丘丘暴徒、1只丘丘岩盔王、1只愚人众·火之债务处理人、1只愚人众·雷莹术士、3只遗迹守卫、1只遗迹猎者、2只遗迹侦察者、78只秘源机兵·构型械、3只雷萤。",
+    "description": "  路线信息：该路线预计用时239.65秒，包含以下怪物：1只木盾丘丘暴徒、1只火斧丘丘暴徒、1只丘丘岩盔王、1只愚人众·火之债务处理人、1只愚人众·雷莹术士、3只遗迹守卫、1只遗迹猎者、2只遗迹侦察者。",
+    "hash_res": "68502223",
     "map_name": "Teyvat",
     "bgi_version": "0.45.0",
     "authors": [
@@ -83,7 +84,7 @@
       "x": 4944.5,
       "y": 2373.87,
       "action": "fight",
-      "move_mode": "run",
+      "move_mode": "dash",
       "action_params": "",
       "type": "path"
     },
@@ -92,7 +93,7 @@
       "x": 4967.5,
       "y": 2385.5,
       "action": "",
-      "move_mode": "run",
+      "move_mode": "dash",
       "action_params": "",
       "type": "path"
     },
@@ -119,7 +120,7 @@
       "x": 4975.75,
       "y": 2450.5,
       "action": "",
-      "move_mode": "run",
+      "move_mode": "dash",
       "action_params": "",
       "type": "path"
     },
@@ -155,7 +156,7 @@
       "x": 5111.23,
       "y": 2567.89,
       "action": "",
-      "move_mode": "run",
+      "move_mode": "dash",
       "action_params": "",
       "type": "path"
     },

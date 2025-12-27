@@ -4,7 +4,8 @@
     "type": "collect",
     "author": "汐",
     "version": "1.0",
-    "description": "  路线信息：该路线预计用时156秒，包含5只精英与10只小怪，预计收入2291摩拉，包含以下怪物：1只打手丘丘人、1只木盾丘丘人、2只雷箭丘丘人、1只丘丘雷兜王、1只愚人众·冰萤术士、1只遗迹巡弋者、2只遗迹防卫者、6只冰萤。",
+    "description": "  路线信息：该路线预计用时166.38秒，包含以下怪物：1只打手丘丘人、1只木盾丘丘人、2只雷箭丘丘人、1只丘丘雷兜王、1只愚人众·冰萤术士、1只遗迹巡弋者、2只遗迹防卫者。",
+    "hash_res": "93649028",
     "bgi_version": "0.42.3",
     "authors": [
       {
@@ -28,7 +29,7 @@
       "x": -3689.65,
       "y": -4290.01,
       "type": "path",
-      "move_mode": "run",
+      "move_mode": "dash",
       "action": "",
       "action_params": ""
     },
@@ -37,7 +38,7 @@
       "x": -3697.88,
       "y": -4328.07,
       "type": "path",
-      "move_mode": "run",
+      "move_mode": "dash",
       "action": "",
       "action_params": ""
     },
@@ -46,7 +47,7 @@
       "x": -3686.68,
       "y": -4360.99,
       "action": "",
-      "move_mode": "run",
+      "move_mode": "dash",
       "action_params": "",
       "type": "path"
     },
@@ -74,7 +75,7 @@
       "x": -3661.41,
       "y": -4391.4,
       "action": "fight",
-      "move_mode": "run",
+      "move_mode": "dash",
       "action_params": "",
       "type": "path"
     },
@@ -83,7 +84,7 @@
       "x": -3661.41,
       "y": -4391.4,
       "action": "combat_script",
-      "move_mode": "run",
+      "move_mode": "dash",
       "action_params": "wait(0.2)",
       "type": "orientation"
     },
@@ -101,7 +102,7 @@
       "x": -3727.96,
       "y": -4306.87,
       "action": "",
-      "move_mode": "run",
+      "move_mode": "dash",
       "action_params": "",
       "type": "path"
     },
@@ -110,7 +111,7 @@
       "x": -3757.29,
       "y": -4324.82,
       "action": "fight",
-      "move_mode": "run",
+      "move_mode": "dash",
       "action_params": "",
       "type": "path"
     },
